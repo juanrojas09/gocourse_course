@@ -39,12 +39,16 @@ func (s *service) Create(ctx context.Context, Name string, StartDate, EndDate st
 	startDateParsed, err := time.Parse("2006-02-02", StartDate)
 	if err != nil {
 		s.logger.Println(err)
-		return nil, err
+		return nil, ErrInvalidStartDate
 	}
 	emdDateParsed, err := time.Parse("2006-02-02", EndDate)
 	if err != nil {
 		s.logger.Println(err)
-		return nil, err
+		return nil, ErrInvalidEndDate
+	}
+
+	if startDateParsed.After(emdDateParsed) {
+		return nil, ErrEndLesserStart
 	}
 	course := domain.Course{
 		Name:      Name,
@@ -121,6 +125,7 @@ func (s *service) GetById(ctx context.Context, id string) (*domain.Course, error
 }
 func (s *service) Update(ctx context.Context, id string, data *UpdateRequest) (*domain.Course, error) {
 
+	//obtener el curso, validar que el start date no sea mayor al end date que tenemos || validar si vienen los dos que no sean mayores
 	course, err := s.repo.Update(ctx, id, data)
 	if err != nil {
 		return nil, err

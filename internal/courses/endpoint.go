@@ -64,13 +64,10 @@ func MakeCreateEndpoint(s Service) Controller {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 
 		r := req.(CreateRequest)
+		//validar campos podriamos
 		course, err := s.Create(ctx, r.Name, r.StartDate, r.EndDate)
 
 		if err != nil {
-
-			if errors.As(err, &ErrNotFound{}) {
-				return nil, response.NotFound(err.Error())
-			}
 			return nil, response.InternalServerError(err.Error())
 		}
 		return response.Created("Course Created successfully", course, nil), nil
