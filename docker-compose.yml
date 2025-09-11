@@ -1,0 +1,20 @@
+version: "3.5"
+
+services:
+  go-course-course:
+    platform: linux/amd64
+    container_name: go-course-course
+    build:
+      context: ./.dockers/mysql
+      dockerfile: Dockerfile
+    environment:
+      MYSQL_DATABASE: go_course_course
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3322:3306" # aplicacion le pego al 3322 y lo redireciona al 3306
+    volumes:
+      - go_course_course_data:/var/lib/mysql
+      - ./dockers/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+volumes:
+  go_course_course_data:
