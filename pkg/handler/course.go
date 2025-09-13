@@ -3,18 +3,20 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
+	"github.com/gin-gonic/gin"
 	"github.com/go-kit/kit/endpoint"
 	httptransport "github.com/go-kit/kit/transport/http"
-	"github.com/gorilla/mux"
 	"github.com/juanrojas09/go_lib_response/response"
 	"github.com/juanrojas09/gocourse_course/internal/courses"
 )
 
 func NewHttpServer(ctx context.Context, endpoints courses.Endpoints) http.Handler {
-	r := mux.NewRouter()
+	rg := gin.Default()
 
 	//funcion por defecto para manejo de errores
 
@@ -22,22 +24,23 @@ func NewHttpServer(ctx context.Context, endpoints courses.Endpoints) http.Handle
 		httptransport.ServerErrorEncoder(encodeError),
 	}
 
-	//declaracion de endpoints.
-	r.Handle("/courses", httptransport.NewServer((endpoint.Endpoint)(endpoints.Create), decodeCourseCreation, encodeCourse)).Methods(http.MethodPost)
+	rg.POST("/courses", ginDecode,
+		gin.WrapH(httptransport.NewServer(endpoint.Endpoint(endpoints.Create), decodeCourseCreation, encodeCourse, opts...)))
 
-	r.Handle("/courses", httptransport.NewServer((endpoint.Endpoint)(endpoints.Get),
-		decodeCourseGetAll, encodeCourse, opts...)).Methods(http.MethodGet)
+	rg.GET("/courses", ginDecode, gin.WrapH(httptransport.NewServer(endpoint.Endpoint(endpoints.Get), decodeCourseGetAll, encodeCourse, opts...)))
 
-	r.Handle("/courses/{id}", httptransport.NewServer((endpoint.Endpoint)(endpoints.GetById),
-		decodeCourseGetById, encodeCourse, opts...)).Methods(http.MethodGet)
+	rg.GET("/courses/:id", ginDecode, gin.WrapH(httptransport.NewServer(endpoint.Endpoint(endpoints.GetById), decodeCourseGetById, encodeCourse, opts...)))
 
-	r.Handle("/courses/{id}", httptransport.NewServer((endpoint.Endpoint)(endpoints.Update),
-		decodeCourseUpdate, encodeCourse, opts...)).Methods(http.MethodPatch)
+	rg.PATCH("/courses/:id", ginDecode, gin.WrapH(httptransport.NewServer(endpoint.Endpoint(endpoints.Update), decodeCourseUpdate, encodeCourse, opts...)))
 
-	r.Handle("/courses/{id}", httptransport.NewServer((endpoint.Endpoint)(endpoints.Delete),
-		decodeCourseDelete, encodeCourse, opts...)).Methods(http.MethodDelete)
+	rg.DELETE("/courses/:id", ginDecode, gin.WrapH(httptransport.NewServer(endpoint.Endpoint(endpoints.Delete), decodeCourseDelete, encodeCourse, opts...)))
 
-	return r
+	return rg
+}
+
+func ginDecode(c *gin.Context) {
+	ctx := context.WithValue(c.Request.Context(), "params", c.Params)
+	c.Request = c.Request.WithContext(ctx)
 }
 
 func decodeCourseGetAll(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -75,8 +78,8 @@ func decodeCourseGetAll(ctx context.Context, r *http.Request) (interface{}, erro
 }
 
 func decodeCourseGetById(ctx context.Context, r *http.Request) (interface{}, error) {
-	path := mux.Vars(r)
-	id := path["id"]
+	id := ctx.Value("params").(gin.Params).ByName("id")
+
 	req := courses.GetRequest{
 		ID: id,
 	}
@@ -87,8 +90,8 @@ func decodeCourseGetById(ctx context.Context, r *http.Request) (interface{}, err
 
 func decodeCourseUpdate(ctx context.Context, r *http.Request) (interface{}, error) {
 	var req courses.UpdateRequest
-	path := mux.Vars(r)
-	id := path["id"]
+	path := ctx.Value("params").(gin.Params)
+	id := path.ByName("id")
 	req.ID = &id
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, response.BadRequest(err.Error())
@@ -100,13 +103,14 @@ func decodeCourseUpdate(ctx context.Context, r *http.Request) (interface{}, erro
 func encodeCourse(ctx context.Context, w http.ResponseWriter, resp interface{}) error {
 	r := resp.(response.Response)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(r.StatusByCode())
+	w.WriteHeader(r.StatusCode())
+	log.Println(r)
 	return json.NewEncoder(w).Encode(r)
 }
 
 func decodeCourseDelete(ctx context.Context, r *http.Request) (interface{}, error) {
-	path := mux.Vars(r)
-	id := path["id"]
+	path := ctx.Value("params").(gin.Params)
+	id := path.ByName("id")
 	req := courses.DeleteRequest{
 		ID: id,
 	}
@@ -124,6 +128,7 @@ func decodeCourseCreation(ctx context.Context, r *http.Request) (interface{}, er
 }
 
 func encodeError(_ context.Context, err error, w http.ResponseWriter) {
+	fmt.Println(err.Error())
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
 	_ = json.NewEncoder(w).Encode(map[string]string{

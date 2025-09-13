@@ -50,7 +50,7 @@ func (r *repository) GetAll(ctx context.Context, filters *Filters, offset int, l
 	tx = tx.Offset(offset).Limit(limit).Order("created_at desc").Find(&c)
 	if tx.Error != nil {
 		if tx.Error == gorm.ErrRecordNotFound {
-			return nil, &ErrNotFound{*filters.Name}
+			return nil, &ErrCourseNotFound{*filters.Name}
 		}
 		return nil, tx.Error
 	}
@@ -63,7 +63,7 @@ func (r *repository) GetById(ctx context.Context, id string) (*domain.Course, er
 	tx := r.db.Model(&c).Where(&domain.Course{ID: id}).First(&c)
 	if tx.Error != nil {
 		if tx.Error == gorm.ErrRecordNotFound {
-			return nil, &ErrNotFound{id}
+			return nil, &ErrCourseNotFound{id}
 		}
 		return nil, tx.Error
 	}
@@ -90,7 +90,7 @@ func (r *repository) Delete(ctx context.Context, id string) (string, error) {
 	tx := r.db.Model(course).Delete(&domain.Course{ID: id})
 	if tx.Error != nil {
 		if tx.Error == gorm.ErrRecordNotFound {
-			return "", &ErrNotFound{id}
+			return "", &ErrCourseNotFound{id}
 		}
 		return "", tx.Error
 	}

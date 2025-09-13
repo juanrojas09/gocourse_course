@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 
 	"github.com/juanrojas09/go_lib_response/response"
 )
@@ -81,7 +82,7 @@ func MakeGetEndpoint(s Service) Controller {
 		courses, meta, err := s.GetAll(ctx, &r, *r.Page, *r.Limit)
 
 		if err != nil {
-			if errors.As(err, &ErrNotFound{}) {
+			if errors.As(err, &ErrCourseNotFound{}) {
 				return nil, response.NotFound(err.Error())
 			}
 			return nil, response.InternalServerError(err.Error())
@@ -96,13 +97,16 @@ func MakeGetByIdEndpoint(s Service) Controller {
 		r := req.(GetRequest)
 		course, err := s.GetById(ctx, r.ID)
 		if err != nil {
-			if errors.As(err, &ErrNotFound{}) {
+
+			if strings.Contains(err.Error(), "not found") {
+				log.Println(err.Error())
 				return nil, response.NotFound(err.Error())
 			}
 			return nil, response.InternalServerError(err.Error())
 		}
 		return response.Ok("course fetched successfully", course, nil), nil
 	}
+
 }
 
 func MakeUpdateEndpoint(s Service) Controller {
@@ -111,7 +115,7 @@ func MakeUpdateEndpoint(s Service) Controller {
 		log.Println("REQ", *r.ID)
 		course, err := s.Update(ctx, *r.ID, &r)
 		if err != nil {
-			if errors.As(err, &ErrNotFound{}) {
+			if errors.As(err, &ErrCourseNotFound{}) {
 				return nil, response.NotFound(err.Error())
 			}
 			return nil, response.InternalServerError(err.Error())
@@ -125,7 +129,7 @@ func MakeDeleteEndpoint(s Service) Controller {
 		r := req.(DeleteRequest)
 		id, err := s.Delete(ctx, r.ID)
 		if err != nil {
-			if errors.As(err, &ErrNotFound{}) {
+			if errors.As(err, &ErrCourseNotFound{}) {
 				return nil, response.NotFound(err.Error())
 			}
 			return nil, response.InternalServerError(err.Error())

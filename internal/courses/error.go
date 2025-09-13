@@ -12,10 +12,10 @@ var ErrInvalidStartDate = errors.New("invalid start_date value")
 var ErrInvalidEndDate = errors.New("invalid end_date value")
 var ErrEndLesserStart = errors.New("start date cannot be greather than end date")
 
-type ErrNotFound struct {
+type ErrCourseNotFound struct {
 	CourseId string
 }
 
-func (e ErrNotFound) Error() string {
+func (e ErrCourseNotFound) Error() string {
 	return fmt.Sprintf("course '%s' not found", e.CourseId)
 }
